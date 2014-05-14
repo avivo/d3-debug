@@ -1,6 +1,6 @@
-########################################################################
+######################################################################
 ### d3-debug.coffee : a view into the depths of d3 data structures ###
-########################################################################
+######################################################################
 #
 # d3-debug helps you understand the complex internal state of d3 data structures (using the Chrome JavaScript console).
 # This is especially useful for debugging issues with selections, groupings, and data binding (and for learning how all of these work in the first place)
@@ -78,7 +78,7 @@ workingExample = d3.debug.workingExample = ->
   d3.debug.olog.disable()
 
 ## Uncomment to automatically run the example on page load
-document.addEventListener 'DOMContentLoaded', workingExample
+# document.addEventListener 'DOMContentLoaded', workingExample
 
 ### Utility methods and helpers ###
 
