@@ -3,15 +3,16 @@
 ########################################################################
 #
 # d3-debug helps you understand the complex internal state of d3 data structures (using the Chrome JavaScript console).
-# This is especially useful for debugging issues with selections, groupings, and data binding (and even when learning how all of these work in the first place)
+# This is especially useful for debugging issues with selections, groupings, and data binding (and for learning how all of these work in the first place)
 #
 # Read and run the "Working Example" below for more info.
 #
 # Dependencies: underscore.js (and of course d3.js)
 #
 # This extensively uses console features from https://developers.google.com/chrome-developer-tools/docs/console#styling_console_output_with_css (equivalent in ff: https://getfirebug.com/wiki/index.php/Console_API)
-
-# TODO call it d3-debug.coffee and add .debug method which also throws in a breakpoint after inspection!
+#
+# TODO 
+# - add option to log additional information for each selection, group, and element; e.g. "opts = {evalForElement: (elt) -> elt.className}".
 
 ### Initialize state ###
 
@@ -28,11 +29,14 @@ olog.enabled = false
 workingExample = d3.debug.workingExample = ->
   explain = (text) -> console.log("%c// #{text}", "color: #718c00; font-size: 14px")
 
-  explain('Simplest use of ".inspect()" on a selection')
+  explain('Enable the object log (olog), using ".olog.enable()" which saves selections during inspections for later perusal.')
+  d3.debug.olog.enable()
+
+  explain('Simplest use of ".inspect()" on a selection. Use d3.debug.olog[0] to do additional inspection later.')
   chart = d3.select('body').append("div").classed('chart', true).style(padding: '30px').inspect()
 
   explain('Use ".inspect" within selection method chains (even as the selection is being created and bound to data). The optional argument shows up in the output in brackets for context.')
-  groups = chart.selectAll("div.row")
+  rows = chart.selectAll("div.row")
     .inspect("after .selectAll")
     .data([4, 8, 15, 16, 23, 42])
     .inspect("after .data") 
@@ -42,43 +46,36 @@ workingExample = d3.debug.workingExample = ->
     .inspect("after .append")
     .classed("row", true)
 
+  explain('Use ".debug()" instead of ".inspect()" to also halt execution and start the debugger after the selection inspection.')
+  rows.debug("rows")
+
   explain('To see the selection state before and after a sequence of operations use: ".inspectWrap -> @"')
-  bars = groups.inspectWrap -> @
-    .call -> @
-      .append("div")
-      .classed("bar", true)
-      .text((d) -> d)
-      .style
-        width: (d) -> 10*d + 'px'
-        font: '12px sans-serif'
-        padding: '3px'
-        margin: '1px'
-        color: 'white'
-        'background-color': 'steelblue'
-        'text-align': 'right'
+  bars = rows.inspectWrap -> @
+    .append("div")
+    .classed("bar", true)
+    .text((d) -> d)
+    .style
+      width: (d) -> 5*d + 'px'
+      font: '12px sans-serif'
+      padding: '3px'
+      margin: '1px'
+      color: 'white'
+      'background-color': 'steelblue'
+      'text-align': 'right'
 
-  explain('You can also provide a context argument: ".inspectWrap \'Context\', -> @".')
-  # bars.inspectWrap "add labels", -> @      
-  #   .call -> @ # .call returns the same selection it was given, which is important here as the output of transition is not a selection.
-  #     .transition()
-  #       .delay(500)
-  #       .duration(1000)
-  #       .attr(r: (d,i) -> (d * 15))
-  #       .attr(fill: 'red')
+  explain('Optionally provide some textual context with: ".inspectWrap \'Context\', -> @".')
+  bars.inspectWrap "animation", -> @      
+    .call -> @ # .call returns the same selection it was given, which is important here as the output of transition is not a selection.
+      .transition()
+        .delay(500)
+        .duration(1000)
+        .style(width: (d) -> 10*d + 'px')
 
-  # # Enable the object log (olog) which saves selections during inspections
-  # d3.debug.olog.enable()
+  explain('Access the object log (olog) with ".olog[0].inspect()"')
+  d3.debug.olog[0].inspect()
 
-  # # Alternitive inline "style" for using inspect and inspectWrap
-  # groups
-  #   .append("text").inspect()
-  #   .inspectWrap -> @text((d) -> d)
-
-  # # Access the olog contents
-  # d3.debug.olog[0].inspect("olog[0]")
-
-  # # Disable the object log when done
-  # d3.debug.olog.disable()
+  explain('Disable the object log with ".olog.disable()"')
+  d3.debug.olog.disable()
 
 ## Uncomment to automatically run the example on page load
 document.addEventListener 'DOMContentLoaded', workingExample
@@ -233,10 +230,11 @@ d3.debug.selection = (sel, rawOpts) ->
     c.assert(_.isArray(sel))
     for group, i in sel
       d3.debug.group(group, i, opts)
-    c.section title: "Other Details", expanded: false, ->
-      if opts.alsoLog
-        c.debug("Custom:", opts.alsoLog)
-      olog.save(sel, '')
+    if olog.enabled || opts.alsoLog
+      c.section title: "Other Details", expanded: false, ->
+        if opts.alsoLog
+          c.debug("Custom:", opts.alsoLog)
+        olog.save(sel, '')
   sel
 
 d3.debug.selection.processOpts = (opts) ->
